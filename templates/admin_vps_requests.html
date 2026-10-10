@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}VPS Requests — Admin{% endblock %}
+{% block head %}
+<style>
+.req-table { width:100%;border-collapse:collapse;font-size:.8rem; }
+.req-table th { text-align:left;padding:.55rem .75rem;font-size:.68rem;font-weight:600;color:var(--text-3);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border); }
+.req-table td { padding:.6rem .75rem;border-bottom:1px solid var(--border);vertical-align:middle; }
+.req-table tr:last-child td { border-bottom:none; }
+.req-table tr:hover td { background:var(--bg-2); }
+.status-badge { display:inline-block;padding:.18rem .55rem;border-radius:999px;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
+.status-pending  { background:rgba(234,179,8,.15);color:#ca8a04; }
+.status-approved { background:rgba(34,197,94,.15);color:#16a34a; }
+.status-denied   { background:rgba(239,68,68,.15);color:#dc2626; }
+.note-cell { max-width:220px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.act-row { display:flex;gap:.4rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:1.5rem 1rem;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+    <div>
+      <h1 style="font-size:1.05rem;font-weight:700;margin-bottom:.2rem;">VPS Requests</h1>
+      <div style="font-size:.75rem;color:var(--text-3);">
+        Mode: <strong>{{ 'Admin-provision' if provision_mode == 'admin_provision' else 'Self-service (requests not used)' }}</strong>
+      </div>
+    </div>
+    <a href="{{ url_for('admin') }}" class="btn btn-ghost btn-sm">← Back to admin</a>
+  </div>
+
+  {% with msgs = get_flashed_messages() %}
+    {% if msgs %}
+      {% for m in msgs %}
+        <div class="alert alert-info" style="margin-bottom:1rem;">{{ m }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if not requests %}
+  <div class="card" style="text-align:center;padding:3rem 1.5rem;color:var(--text-3);font-size:.85rem;">
+    No VPS requests yet.
+  </div>
+  {% else %}
+  <div class="card" style="padding:0;overflow:auto;">
+    <table class="req-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>User</th>
+          <th>IP</th>
+          <th>Note</th>
+          <th>Status</th>
+          <th>Submitted</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in requests %}
+      <tr>
+        <td style="color:var(--text-3);font-family:var(--mono);">{{ r.id }}</td>
+        <td>
+          <span style="font-weight:600;">{{ r.username }}</span>
+          <span style="color:var(--text-3);font-size:.7rem;font-family:var(--mono);margin-left:.3rem;">#{{ r.user_id }}</span>
+        </td>
+        <td style="font-family:var(--mono);color:var(--text-3);font-size:.72rem;">{{ r.request_ip }}</td>
+        <td class="note-cell" title="{{ r.note }}">{{ r.note or '—' }}</td>
+        <td>
+          <span class="status-badge status-{{ r.status }}">{{ r.status }}</span>
+        </td>
+        <td style="color:var(--text-3);font-size:.72rem;white-space:nowrap;">
+          {{ r.created_at | int | strftime('%Y-%m-%d %H:%M') if r.created_at else '—' }}
+        </td>
+        <td>
+          {% if r.status == 'pending' %}
+          <div class="act-row">
+            <form method="post" action="{{ url_for('admin_approve_request', req_id=r.id) }}">
+              <button class="btn btn-primary btn-sm">Approve</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_deny_request', req_id=r.id) }}"
+                  onsubmit="return confirm('Deny this request?')">
+              <button class="btn btn-ghost btn-sm" style="color:var(--red);">Deny</button>
+            </form>
+          </div>
+          {% else %}
+          <span style="color:var(--text-3);font-size:.72rem;">
+            {{ r.reviewed_at | int | strftime('%Y-%m-%d %H:%M') if r.reviewed_at else '—' }}
+          </span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
